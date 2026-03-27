@@ -9,7 +9,7 @@ template:
   name: spatiallattice
   description: pipeline for processing and integration of MACSima multiplexed imaging
     with H&E stained tissue slides
-  author: '@CaroAMN'
+  author: "@CaroAMN"
   version: 1.0.0dev
   force: true
   outdir: .
