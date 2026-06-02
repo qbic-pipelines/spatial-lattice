@@ -3,8 +3,10 @@
     IMPORT MODULES / SUBWORKFLOWS / FUNCTIONS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
-include { FASTQC                 } from '../modules/nf-core/fastqc/main'
 include { MULTIQC                } from '../modules/nf-core/multiqc/main'
+include { MCSTAGING_MACSIMA2MC   } from '../modules/nf-core/mcstaging/macsima2mc/main'
+include { ASHLAR                 } from '../modules/nf-core/ashlar/main'
+include { BACKSUB                } from '../modules/nf-core/backsub/main'
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
@@ -29,11 +31,38 @@ workflow SPATIALLATTICE {
 
     def ch_versions = channel.empty()
     def ch_multiqc_files = channel.empty()
-    //
-    // MODULE: Run FastQC
-    //
-    FASTQC(ch_samplesheet)
-    ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.map{ _meta, file -> file })
+
+    // get the marker sheet file from individual samples specified in the samplesheet
+    // current assumtion is that the sample sheet looks like this:
+    // meta.id raw_images markersheet
+    def ch_markersheet = ch_samplesheet
+        .map { meta, imagetiles, markersheet -> markersheet ? file(markersheet, checkIfExists: true) : null }
+    
+    // macsima2mc staging
+    // input needs to be adjustedt to the satging module 
+    MCSTAGING_MACSIMA2MC(ch_samplesheet)
+
+
+    // ashlar stitching and registration
+    ASHLAR(MCSTAGING_MACSIMA2MC.out_dir)
+
+    // background subtraction
+    // optional if people want to set this option
+    if (params.background_subtraction) {
+        BACKSUB(
+            ASHLAR.tif,
+            ch_markersheet
+        )
+
+    }
+
+
+
+
+
+
+
+
 
     //
     // Collate and save software versions
@@ -90,7 +119,8 @@ workflow SPATIALLATTICE {
             ]
         }
     )
-    emit:multiqc_report = MULTIQC.out.report.map { _meta, report -> [report] }.toList() // channel: /path/to/multiqc_report.html
+    emit:
+    multiqc_report = MULTIQC.out.report.map { _meta, report -> [report] }.toList() // channel: /path/to/multiqc_report.html
     versions       = ch_versions                 // channel: [ path(versions.yml) ]
 }
 
