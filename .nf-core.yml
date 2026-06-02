@@ -1,16 +1,13 @@
-repository_type: pipeline
-
-nf_core_version: 3.5.2
-
 lint: {}
-
+nf_core_version: 4.0.2
+repository_type: pipeline
 template:
-  org: nf-core
-  name: spatiallattice
+  author: "@CaroAMN"
   description: pipeline for processing and integration of MACSima multiplexed imaging
     with H&E stained tissue slides
-  author: '@CaroAMN'
-  version: 1.0.0dev
-  force: true
-  outdir: .
+  force: false
   is_nfcore: true
+  name: spatiallattice
+  org: nf-core
+  outdir: .
+  version: 1.0.0dev
