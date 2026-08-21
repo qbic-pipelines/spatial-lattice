@@ -32,28 +32,31 @@ workflow SPATIALLATTICE {
     def ch_versions = channel.empty()
     def ch_multiqc_files = channel.empty()
 
-    // get the marker sheet file from individual samples specified in the samplesheet
-    // current assumtion is that the sample sheet looks like this:
-    // meta.id raw_images markersheet
-    def ch_markersheet = ch_samplesheet
-        .map { meta, imagetiles, markersheet -> markersheet ? file(markersheet, checkIfExists: true) : null }
-    
     // macsima2mc staging
-    // input needs to be adjustedt to the satging module 
-    MCSTAGING_MACSIMA2MC(ch_samplesheet)
+    // input: [ meta, input_dir (parent folder of the raw tiles), output_dir (string) ]
+    MCSTAGING_MACSIMA2MC(
+        ch_samplesheet.map { meta, raw_images -> [ meta, raw_images, "${meta.id}" ] }
+    )
 
+    // The staging output directory contains well-rack-roi-exp/markers.csv and
+    // well-rack-roi-exp/raw/*.ome.tif. Collect the raw ome.tif files for ASHLAR
+    // and the markersheet for BACKSUB from the staging output.
+    ch_ashlar_input = MCSTAGING_MACSIMA2MC.out.out_dir
+        .map { meta, staging_dir ->
+            def raw_dir = staging_dir.resolve('raw')
+            def images  = raw_dir.listFiles().findAll { it.name.endsWith('.ome.tif') }.sort()
+            [ meta, images ]
+        }
+
+    ch_markersheet = MCSTAGING_MACSIMA2MC.out.out_dir
+        .map { meta, staging_dir -> [ meta, staging_dir.resolve('markers.csv') ] }
 
     // ashlar stitching and registration
-    ASHLAR(MCSTAGING_MACSIMA2MC.out_dir)
+    ASHLAR(ch_ashlar_input, [], [])
 
-    // background subtraction
-    // optional if people want to set this option
+    // background subtraction (optional, off by default)
     if (params.background_subtraction) {
-        BACKSUB(
-            ASHLAR.tif,
-            ch_markersheet
-        )
-
+        BACKSUB(ASHLAR.out.tif, ch_markersheet)
     }
 
 
