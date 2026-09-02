@@ -17,7 +17,6 @@ process MCSTAGING_MACSIMA2MC {
     task.ext.when == null || task.ext.when
 
     script:
-    def prefix = task.ext.prefix ?: "${meta.id}"
     // Exit if running this module with -profile conda / -profile mamba
     if (workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1) {
         error "macsima2mc module in conda does not exist. Please use Docker / Singularity / Podman instead."
@@ -28,7 +27,7 @@ process MCSTAGING_MACSIMA2MC {
     """
     macsima2mc \
         -i ${input_dir} \
-        -o ${prefix} \
+        -o ${output_dir} \
         ${args}
     """
 

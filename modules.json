@@ -17,12 +17,12 @@
                     },
                     "mcstaging/macsima2mc": {
                         "branch": "master",
-                        "git_sha": "28cb5cea6e699f66696addea78c9d09e5276c6ca",
+                        "git_sha": "c565f1b27c06a1e8b726e2a646d4c822ae3b514a",
                         "installed_by": ["modules"]
                     },
                     "multiqc": {
                         "branch": "master",
-                        "git_sha": "008f9d3e61209bf995edac3ba531f54e269e1215",
+                        "git_sha": "98403d15b0e50edae1f3fec5eae5e24982f1fade",
                         "installed_by": ["modules"]
                     }
                 }
