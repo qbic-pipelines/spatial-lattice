@@ -40,17 +40,17 @@ workflow SPATIALLATTICE {
 
     MCSTAGING_MACSIMA2MC.out.out_dir.view()
 
-    def ch_ashlar_i = MCSTAGING_MACSIMA2MC.out.out_dir
+    def ch_macsima2mc_out = MCSTAGING_MACSIMA2MC.out.out_dir
         .flatMap { meta, acq_group_dirs ->
             acq_group_dirs.collect { acq_path ->
                 def acq_name = acq_path.getFileName().toString()
 
                 // Parse: rack-01-well-C01-roi-001-exp-1
                 def parts = acq_name.split('-')
-                def rack = parts[1]  // "01"
-                def well = parts[3]  // "C01"
-                def roi = parts[5]   // "001"
-                def exposure = parts[7]  // "1"
+                def rack = parts[1]
+                def well = parts[3]
+                def roi = parts[5]
+                def exposure = parts[7]
 
                 // Get all ome.tif files from the raw subdirectory
                 def raw_dir = acq_path.resolve('raw')
@@ -58,6 +58,9 @@ workflow SPATIALLATTICE {
                     ?.findAll { it.name.endsWith('.ome.tif') || it.name.endsWith('.ome.tiff') }
                     ?.collect { it.toPath() }
                     ?: []
+
+                // Get marker sheet (adjust filename if needed)
+                def marker_sheet = acq_path.resolve('markers.csv')
 
                 // Create unique ID for this acquisition group
                 def unique_id = "${meta.id}_exp${exposure}"
@@ -71,26 +74,37 @@ workflow SPATIALLATTICE {
                     acquisition_group: acq_name
                 ]
 
-                [enriched_meta, images]
+                [enriched_meta, images, marker_sheet]
             }
         }
+        .multiMap { meta, images, marker_sheet ->
+            images: [meta, images]
+            markers: [meta, marker_sheet]
+    }
+
+    // Now you have two separate channels
+    def ch_ashlar_i = ch_macsima2mc_out.images
+    def ch_markersheet = ch_macsima2mc_out.markers
 
     ch_ashlar_i.view()
     // ashlar stitching and registration
     ASHLAR(ch_ashlar_i, [], [])
 
     // background subtraction (optional, off by default)
-    //if (params.background_subtraction) {
-    //    BACKSUB(ASHLAR.out.tif, ch_markersheet)
-    //}
+    if (params.background_subtraction) {
 
+        // merge ashlar output with the corresponding marker sheet by the metamap
+        ch_backsub_in = ASHLAR.out.tif
+            .join(ch_markersheet)
+            .multiMap { meta, ashlar_tif, marker_sheet ->
+                images: [meta, ashlar_tif]
+                markers: [meta, marker_sheet]
+            }
 
+        // seperate agian now that we have the right markersheet for each image into separate channels
 
-
-
-
-
-
+        BACKSUB(ch_backsub_in.images, ch_backsub_in.markers)
+    }
 
     //
     // Collate and save software versions
