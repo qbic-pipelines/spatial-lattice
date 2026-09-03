@@ -38,26 +38,51 @@ workflow SPATIALLATTICE {
         ch_samplesheet.map { meta, raw_images -> [ meta, raw_images, "${meta.id}" ] }
     )
 
-    // The staging output directory contains well-rack-roi-exp/markers.csv and
-    // well-rack-roi-exp/raw/*.ome.tif. Collect the raw ome.tif files for ASHLAR
-    // and the markersheet for BACKSUB from the staging output.
-    ch_ashlar_input = MCSTAGING_MACSIMA2MC.out.out_dir
-        .map { meta, staging_dir ->
-            def raw_dir = staging_dir.resolve('raw')
-            def images  = raw_dir.listFiles().findAll { it.name.endsWith('.ome.tif') }.sort()
-            [ meta, images ]
+    MCSTAGING_MACSIMA2MC.out.out_dir.view()
+
+    def ch_ashlar_i = MCSTAGING_MACSIMA2MC.out.out_dir
+        .flatMap { meta, acq_group_dirs ->
+            acq_group_dirs.collect { acq_path ->
+                def acq_name = acq_path.getFileName().toString()
+
+                // Parse: rack-01-well-C01-roi-001-exp-1
+                def parts = acq_name.split('-')
+                def rack = parts[1]  // "01"
+                def well = parts[3]  // "C01"
+                def roi = parts[5]   // "001"
+                def exposure = parts[7]  // "1"
+
+                // Get all ome.tif files from the raw subdirectory
+                def raw_dir = acq_path.resolve('raw')
+                def images = raw_dir.toFile().listFiles()
+                    ?.findAll { it.name.endsWith('.ome.tif') || it.name.endsWith('.ome.tiff') }
+                    ?.collect { it.toPath() }
+                    ?: []
+
+                // Create unique ID for this acquisition group
+                def unique_id = "${meta.id}_exp${exposure}"
+
+                def enriched_meta = meta + [
+                    id: unique_id,
+                    rack: rack,
+                    well: well,
+                    roi: roi,
+                    exposure: exposure,
+                    acquisition_group: acq_name
+                ]
+
+                [enriched_meta, images]
+            }
         }
 
-    ch_markersheet = MCSTAGING_MACSIMA2MC.out.out_dir
-        .map { meta, staging_dir -> [ meta, staging_dir.resolve('markers.csv') ] }
-
+    ch_ashlar_i.view()
     // ashlar stitching and registration
-    ASHLAR(ch_ashlar_input, [], [])
+    ASHLAR(ch_ashlar_i, [], [])
 
     // background subtraction (optional, off by default)
-    if (params.background_subtraction) {
-        BACKSUB(ASHLAR.out.tif, ch_markersheet)
-    }
+    //if (params.background_subtraction) {
+    //    BACKSUB(ASHLAR.out.tif, ch_markersheet)
+    //}
 
 
 

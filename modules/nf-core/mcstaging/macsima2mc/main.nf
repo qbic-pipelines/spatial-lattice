@@ -25,10 +25,19 @@ process MCSTAGING_MACSIMA2MC {
     def args   = task.ext.args   ?: ''
 
     """
-    macsima2mc \
-        -i ${input_dir} \
-        -o ${output_dir} \
-        ${args}
+    mkdir -p ${output_dir}
+
+    # Get all cycle folders and sort them numerically
+    for cycle in ${input_dir}/*Cycle*;
+    do
+        cycle_folder=\$(basename "\$cycle")
+        echo "Processing \$cycle_folder..."
+
+        macsima2mc \\
+            -i \$cycle \\
+            -o ${output_dir} \\
+            ${args}
+    done
     """
 
     stub:
