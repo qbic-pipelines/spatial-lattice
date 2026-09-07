@@ -2,9 +2,9 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="90.754173mm"
-   height="28.353033mm"
-   viewBox="0 0 90.754173 28.353033"
+   width="141.17316mm"
+   height="44.104717mm"
+   viewBox="0 0 141.17316 44.104717"
    version="1.1"
    id="svg1"
    xml:space="preserve"
@@ -13,17 +13,17 @@
      id="defs1" /><g
      id="g579"
      style="display:inline"
-     transform="translate(-94.176515,-70.876215)"><text
+     transform="translate(-94.43757,-65.542205)"><text
        xml:space="preserve"
-       style="font-weight:bold;font-size:12.7px;font-family:Arial, 'DejaVu Sans', 'Liberation Sans', 'Bitstream Vera Sans', sans-serif;-inkscape-font-specification:'Arial, DejaVu Sans, Liberation Sans, Bitstream Vera Sans, sans-serif, Bold';writing-mode:lr-tb;direction:ltr;fill:#000000;fill-opacity:1;stroke:none;stroke-width:2.64599;stroke-dasharray:none;stroke-opacity:1;paint-order:markers stroke fill"
+       style="font-weight:bold;font-size:19.7556px;font-family:Arial, 'DejaVu Sans', 'Liberation Sans', 'Bitstream Vera Sans', sans-serif;-inkscape-font-specification:'Arial, DejaVu Sans, Liberation Sans, Bitstream Vera Sans, sans-serif, Bold';writing-mode:lr-tb;direction:ltr;fill:#000000;fill-opacity:1;stroke:none;stroke-width:2.64599;stroke-dasharray:none;stroke-opacity:1;paint-order:markers stroke fill"
        x="93.706604"
        y="80.477417"
        id="text578"><tspan
          id="tspan577"
-         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:12.7px;font-family:'Maven Pro';-inkscape-font-specification:'Maven Pro Bold';stroke-width:2.646"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:19.7556px;font-family:'Maven Pro';-inkscape-font-specification:'Maven Pro Bold';stroke-width:2.646"
          x="93.706604"
          y="80.477417">qbic-pipelines/</tspan><tspan
-         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:12.7px;font-family:'Maven Pro';-inkscape-font-specification:'Maven Pro Bold';stroke-width:2.646"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:19.7556px;font-family:'Maven Pro';-inkscape-font-specification:'Maven Pro Bold';stroke-width:2.646"
          x="93.706604"
-         y="96.93055"
+         y="106.07117"
          id="tspan578">spatial-lattice</tspan></text></g></svg>
