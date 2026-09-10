@@ -1,0 +1,68 @@
+name: "stainsegmy"
+description: Segment H&E stained images using stainsegmy
+keywords:
+  - hne
+  - histology segmentation
+tools:
+  - "stainsegmy":
+      description: "Segmentation of H&E stained images using stainsegmy"
+      homepage: "https://github.com/qbic-pipelines/stainsegmy"
+      documentation: "https://github.com/qbic-pipelines/stainsegmy"
+      tool_dev_url: "https://github.com/qbic-pipelines/stainsegmy"
+      licence: "MIT License"
+      identifier: ""
+
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'sample1' ]`
+    - hne_img:
+        type: file
+        description: H&E stained image file
+        pattern: "*.{tif,tiff,ome.tif,ome.tiff}"
+        ontologies:
+          - edam: "http://edamontology.org/format_3727"
+          - edam: "http://edamontology.org/format_3591"
+
+output:
+  hne_seg_mask:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1' ]`
+      - "${prefix}_hne_segmentation_mask.ome.tif":
+          type: file
+          description: H&E segmentation mask in OME-TIFF format
+          pattern: "*.{ome.tif}"
+          ontologies:
+            - edam: "http://edamontology.org/format_3727"
+
+  versions_stainsegmy:
+    - - "${task.process}":
+          type: string
+          description: The name of the process
+      - "stainsegmy":
+          type: string
+          description: The name of the tool
+      - "stainsegmy --version":
+          type: eval
+          description: The expression to obtain the version of the tool
+
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - stainsegmy:
+          type: string
+          description: The name of the tool
+      - stainsegmy --version:
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - "@tckumarasekara"
+maintainers:
+  - "@tckumarasekara"

@@ -3,14 +3,16 @@
     IMPORT MODULES / SUBWORKFLOWS / FUNCTIONS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
-include { MULTIQC                } from '../modules/nf-core/multiqc/main'
-include { MCSTAGING_MACSIMA2MC   } from '../modules/nf-core/mcstaging/macsima2mc/main'
-include { ASHLAR                 } from '../modules/nf-core/ashlar/main'
-include { BACKSUB                } from '../modules/nf-core/backsub/main'
-include { paramsSummaryMap       } from 'plugin/nf-schema'
-include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
-include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
-include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_spatiallattice_pipeline'
+include { MULTIQC                    } from '../modules/nf-core/multiqc/main'
+include { MCSTAGING_MACSIMA2MC       } from '../modules/nf-core/mcstaging/macsima2mc/main'
+include { ASHLAR                     } from '../modules/nf-core/ashlar/main'
+include { BACKSUB                    } from '../modules/nf-core/backsub/main'
+include { STAINSEGMY                  } from '../modules/qbic/stainsegmy/main'
+include { paramsSummaryMap           } from 'plugin/nf-schema'
+include { TIF_REGISTRATION_STAINWARPY} from '../subworkflows/nf-core/tif_registration_stainwarpy'
+include { paramsSummaryMultiqc       } from '../subworkflows/nf-core/utils_nfcore_pipeline'
+include { softwareVersionsToYAML     } from '../subworkflows/nf-core/utils_nfcore_pipeline'
+include { methodsDescriptionText     } from '../subworkflows/local/utils_nfcore_spatiallattice_pipeline'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -32,10 +34,23 @@ workflow SPATIALLATTICE {
     def ch_versions = channel.empty()
     def ch_multiqc_files = channel.empty()
 
+
+    ch_samplesheet.view()
+    //ch_input.view()
+    // Split into macsima and hne channels here
+    ch_samplesheet
+        .multiMap { meta, raw_images, hne_file ->
+            macsima: [meta, raw_images]
+            hne: [meta, hne_file]
+        }
+        .set { ch_input }
+
+
+
+
     // macsima2mc staging
-    // input: [ meta, input_dir (parent folder of the raw tiles), output_dir (string) ]
     MCSTAGING_MACSIMA2MC(
-        ch_samplesheet.map { meta, raw_images -> [ meta, raw_images, "${meta.id}" ] }
+        ch_input.macsima.map { meta, raw_images -> [ meta, raw_images, "${meta.id}" ] }
     )
 
     MCSTAGING_MACSIMA2MC.out.out_dir.view()
@@ -47,9 +62,9 @@ workflow SPATIALLATTICE {
 
                 // Parse: rack-01-well-C01-roi-001-exp-1
                 def parts = acq_name.split('-')
-                def rack = parts[1]
-                def well = parts[3]
-                def roi = parts[5]
+                //def rack = parts[1] # delete potentially
+                //def well = parts[3]
+                //def roi = parts[5]
                 def exposure = parts[7]
 
                 // Get all ome.tif files from the raw subdirectory
@@ -63,13 +78,10 @@ workflow SPATIALLATTICE {
                 def marker_sheet = acq_path.resolve('markers.csv')
 
                 // Create unique ID for this acquisition group
-                def unique_id = "${meta.id}_exp${exposure}"
+                def unique_id = "${meta.id}_${meta.rack}_${meta.well}_${meta.roi}_exp${exposure}"
 
                 def enriched_meta = meta + [
                     id: unique_id,
-                    rack: rack,
-                    well: well,
-                    roi: roi,
                     exposure: exposure,
                     acquisition_group: acq_name
                 ]
@@ -82,13 +94,13 @@ workflow SPATIALLATTICE {
             markers: [meta, marker_sheet]
     }
 
-    // Now you have two separate channels
-    def ch_ashlar_i = ch_macsima2mc_out.images
+    // seperate them for ashlar input
+    def ch_ashlar_in = ch_macsima2mc_out.images
     def ch_markersheet = ch_macsima2mc_out.markers
 
-    ch_ashlar_i.view()
+    ch_ashlar_in.view()
     // ashlar stitching and registration
-    ASHLAR(ch_ashlar_i, [], [])
+    ASHLAR(ch_ashlar_in, [], [])
 
     // background subtraction (optional, off by default)
     if (params.background_subtraction) {
@@ -101,10 +113,24 @@ workflow SPATIALLATTICE {
                 markers: [meta, marker_sheet]
             }
 
-        // seperate agian now that we have the right markersheet for each image into separate channels
-
         BACKSUB(ch_backsub_in.images, ch_backsub_in.markers)
     }
+
+    // segmentation h&E
+    if (params.stainsegmy) {
+        STAINSEGMY(ch_input.hne)
+    }
+
+    // segmentation Macsima
+    //TODO: adding cellpose module here for segmentation of Macsima images
+    // nulcear segmentation only not cell segmentation
+
+
+    // H&E registration (optional, off by default)TODO later
+    // TODO try with the tool from victor
+   // if (params.he_registration) {
+   //     TIF_REGISTRATION_STAINWARPY(ch_hne, ASHLAR.out.tif,[],[],[])
+   // }
 
     //
     // Collate and save software versions

@@ -1,0 +1,69 @@
+nextflow_process {
+
+    name "Test Process STAINSEGMY"
+    script "../main.nf"
+    process "STAINSEGMY"
+
+    tag "modules"
+    tag "stainsegmy"
+
+    config "./nextflow.config" 
+
+    test("colon_tissue - ome.tif") {
+
+        when {
+            params {
+                modules_args = "--cuda --architecture U-Net"
+            }
+            process {
+                """
+                input[0] = [
+                    [ id:'sample1'],
+                    file(params.modules_testdata_base_path + 'imaging/hne_multiplexed/hne_image_colon.ome.tif', checkIfExists: true)]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert snapshot(
+                    file(process.out.hne_seg_mask.get(0).get(1)).exists(),
+                    process.out.findAll { key, val -> key.startsWith("versions")}
+                    ).match()
+                }
+            )
+        }
+
+    }
+
+    test("colon_tissue - ome.tif - stub") {
+
+        options "-stub"
+
+        when {
+            params {
+                modules_args = null
+            }
+            process {
+                """
+                input[0] = [
+                    [ id:'sample1'],
+                    file(params.modules_testdata_base_path + 'imaging/hne_multiplexed/hne_image_colon.ome.tif', checkIfExists: true)]
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert snapshot(
+                    process.out.hne_seg_mask,
+                    process.out.findAll { key, val -> key.startsWith("versions")}
+                    ).match()
+                }
+            )
+        }
+
+    }
+}

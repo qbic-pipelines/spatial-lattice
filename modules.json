@@ -24,11 +24,31 @@
                         "branch": "master",
                         "git_sha": "98403d15b0e50edae1f3fec5eae5e24982f1fade",
                         "installed_by": ["modules"]
+                    },
+                    "stainwarpy/extractchannel": {
+                        "branch": "master",
+                        "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
+                        "installed_by": ["tif_registration_stainwarpy"]
+                    },
+                    "stainwarpy/register": {
+                        "branch": "master",
+                        "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
+                        "installed_by": ["tif_registration_stainwarpy"]
+                    },
+                    "stainwarpy/transformsegmask": {
+                        "branch": "master",
+                        "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
+                        "installed_by": ["tif_registration_stainwarpy"]
                     }
                 }
             },
             "subworkflows": {
                 "nf-core": {
+                    "tif_registration_stainwarpy": {
+                        "branch": "master",
+                        "git_sha": "abfb5c0d2bac60140c23dfc6f8a5d2ef529adc1c",
+                        "installed_by": ["subworkflows"]
+                    },
                     "utils_nextflow_pipeline": {
                         "branch": "master",
                         "git_sha": "05954dab2ff481bcb999f24455da29a5828af08d",
@@ -43,6 +63,17 @@
                         "branch": "master",
                         "git_sha": "fdc08b8b1ae74f56686ce21f7ea11ad11990ce57",
                         "installed_by": ["subworkflows"]
+                    }
+                }
+            }
+        },
+        "https://github.com/qbic-pipelines/nextflow-modules.git": {
+            "modules": {
+                "qbic": {
+                    "stainsegmy": {
+                        "branch": "main",
+                        "git_sha": "ec045d7f6785d597c1ab524fddaacce50b678b45",
+                        "installed_by": ["modules"]
                     }
                 }
             }

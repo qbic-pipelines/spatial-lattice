@@ -109,9 +109,14 @@ workflow PIPELINE_INITIALISATION {
 
     channel
         .fromList(samplesheetToList(input, "${projectDir}/assets/schema_input.json"))
-        .map {
-            meta, raw_images ->
-                return [ meta, file(raw_images, checkIfExists: true) ]
+        .map { meta, raw_images, hne ->
+            // meta already holds experiment, rack, well, roi from the schema.
+            // Add an id (samplesheetToList does not create one for you).
+            def new_meta = meta + [ id: meta.experiment ]
+            // Check if hne is empty or null
+            // If it is, create an empty list
+            //def hne_file = (hne && hne.trim() != '') ? file(hne, checkIfExists: true) : []
+            return [ new_meta, file(raw_images, checkIfExists: true), hne]
         }
         .set { ch_samplesheet }
 

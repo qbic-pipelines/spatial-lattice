@@ -7,20 +7,45 @@
     "items": {
         "type": "object",
         "properties": {
-            "sample": {
+            "experiment": {
                 "type": "string",
                 "pattern": "^\\S+$",
-                "errorMessage": "Sample name must be provided and cannot contain spaces",
-                "meta": ["id"]
+                "errorMessage": "experiment name must be provided and cannot contain spaces",
+                "meta": ["experiment"]
             },
-            "raw_images": {
+            "rack": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "rack name must be provided and cannot contain spaces",
+                "meta": ["rack"]
+            },
+            "well": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "well name must be provided and cannot contain spaces",
+                "meta": ["well"]
+            },
+            "roi": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "roi name must be provided and cannot contain spaces",
+                "meta": ["roi"]
+            },
+            "raw_images_ROI": {
                 "type": "string",
                 "format": "directory-path",
                 "exists": true,
                 "pattern": "^\\S+$",
                 "errorMessage": "Path to the parent folder of the raw MACSima tiles must be provided and cannot contain spaces"
+            },
+            "HnE_ROI": {
+                "type": "string",
+                "format": "file-path",
+                "exists": true,
+                "pattern": "^\\S+$",
+                "errorMessage": "Path to the H&E ROI file must be provided and cannot contain spaces"
             }
         },
-        "required": ["sample", "raw_images"]
+        "required": ["experiment", "rack", "well", "roi", "raw_images_ROI"]
     }
 }

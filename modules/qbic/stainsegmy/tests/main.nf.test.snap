@@ -1,0 +1,47 @@
+{
+    "colon_tissue - ome.tif": {
+        "content": [
+            true,
+            {
+                "versions_stainsegmy": [
+                    [
+                        "STAINSEGMY",
+                        "stainsegmy",
+                        "0.1.3"
+                    ]
+                ]
+            }
+        ],
+        "timestamp": "2026-04-22T22:41:51.248401504",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "25.10.4"
+        }
+    },
+    "colon_tissue - ome.tif - stub": {
+        "content": [
+            [
+                [
+                    {
+                        "id": "sample1"
+                    },
+                    "sample1_hne_segmentation_mask.ome.tif:md5,d41d8cd98f00b204e9800998ecf8427e"
+                ]
+            ],
+            {
+                "versions_stainsegmy": [
+                    [
+                        "STAINSEGMY",
+                        "stainsegmy",
+                        "0.1.3"
+                    ]
+                ]
+            }
+        ],
+        "timestamp": "2026-04-22T22:42:00.792696245",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "25.10.4"
+        }
+    }
+}
