@@ -15,6 +15,11 @@
                         "git_sha": "7a22732d2e89775b51eefdf647d790f2b1fea862",
                         "installed_by": ["modules"]
                     },
+                    "cellpose": {
+                        "branch": "master",
+                        "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
+                        "installed_by": ["modules"]
+                    },
                     "mcstaging/macsima2mc": {
                         "branch": "master",
                         "git_sha": "c565f1b27c06a1e8b726e2a646d4c822ae3b514a",

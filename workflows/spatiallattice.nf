@@ -8,6 +8,7 @@ include { MCSTAGING_MACSIMA2MC       } from '../modules/nf-core/mcstaging/macsim
 include { ASHLAR                     } from '../modules/nf-core/ashlar/main'
 include { BACKSUB                    } from '../modules/nf-core/backsub/main'
 include { STAINSEGMY                 } from '../modules/qbic/stainsegmy/main'
+include { CELLPOSE                    } from '../modules/nf-core/cellpose/main'
 include { paramsSummaryMap           } from 'plugin/nf-schema'
 include { TIF_REGISTRATION_STAINWARPY} from '../subworkflows/nf-core/tif_registration_stainwarpy'
 include { paramsSummaryMultiqc       } from '../subworkflows/nf-core/utils_nfcore_pipeline'
@@ -35,8 +36,7 @@ workflow SPATIALLATTICE {
     def ch_multiqc_files = channel.empty()
 
 
-    //ch_samplesheet.view()
-
+   // if batch processing a project, collect metadata from the project directory structure
     if (params.project){
         ch_samplesheet.view()
         ch_input = ch_samplesheet
@@ -120,21 +120,17 @@ workflow SPATIALLATTICE {
                 def acq_name = acq_path.getFileName().toString()
                 // Parse: rack-01-well-C01-roi-001-exp-1
                 def parts = acq_name.split('-')
-                //def rack = parts[1] # delete potentially
-                //def well = parts[3]
-                //def roi = parts[5]
                 def exposure = parts[7]
 
                 // Get all ome.tif files from the raw subdirectory
                 def raw_dir = acq_path.resolve('raw')
                 def images = raw_dir.toFile().listFiles()
-                    ?.findAll { it.name.endsWith('.ome.tif') || it.name.endsWith('.ome.tiff') }
-                    ?.collect { it.toPath() }
+                    ?.findAll { it -> it.name.endsWith('.ome.tif') || it.name.endsWith('.ome.tiff') }
+                    ?.collect { it -> it.toPath() }
                     ?: []
 
                 // Get marker sheet (adjust filename if needed)
                 def marker_sheet = acq_path.resolve('markers.csv')
-
                 // Create unique ID for this acquisition group
                 def unique_id = "${meta.id}_exp${exposure}"
 
@@ -172,6 +168,11 @@ workflow SPATIALLATTICE {
             }
 
         BACKSUB(ch_backsub_in.images, ch_backsub_in.markers)
+    }
+
+    //nuclei segmentation with cellpose
+    if (params.cellpose) {
+        CELLPOSE(ch_input.macsima.map { meta, raw_images -> [meta, raw_images] }, params.cellpose_model)
     }
 
     // segmentation h&E
