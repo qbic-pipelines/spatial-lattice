@@ -106,19 +106,26 @@ workflow PIPELINE_INITIALISATION {
     //
     // Create channel from input file provided through params.input
     //
+    if (params.project){
+        channel
+            .fromList(samplesheetToList(input, "${projectDir}/assets/schema_input_project.json"))
+            .map { meta, macsima_project, hne_project ->
+                [ meta, file(macsima_project, checkIfExists: true), hne_project]
+            }
+            .set { ch_samplesheet }
+    }
+    else {
+        channel
+            .fromList(samplesheetToList(input, "${projectDir}/assets/schema_input.json"))
+            .map { meta, raw_images, hne ->
+                // meta already holds experiment, rack, well, roi from the schema.
+                // Add an id (samplesheetToList does not create one for you).
+                def new_meta = meta + [ id: meta.experiment ]
+                [ new_meta, file(raw_images, checkIfExists: true), hne]
+            }
+            .set { ch_samplesheet }
 
-    channel
-        .fromList(samplesheetToList(input, "${projectDir}/assets/schema_input.json"))
-        .map { meta, raw_images, hne ->
-            // meta already holds experiment, rack, well, roi from the schema.
-            // Add an id (samplesheetToList does not create one for you).
-            def new_meta = meta + [ id: meta.experiment ]
-            // Check if hne is empty or null
-            // If it is, create an empty list
-            //def hne_file = (hne && hne.trim() != '') ? file(hne, checkIfExists: true) : []
-            return [ new_meta, file(raw_images, checkIfExists: true), hne]
-        }
-        .set { ch_samplesheet }
+    }
 
     emit:
     samplesheet = ch_samplesheet

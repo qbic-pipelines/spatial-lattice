@@ -7,7 +7,7 @@ include { MULTIQC                    } from '../modules/nf-core/multiqc/main'
 include { MCSTAGING_MACSIMA2MC       } from '../modules/nf-core/mcstaging/macsima2mc/main'
 include { ASHLAR                     } from '../modules/nf-core/ashlar/main'
 include { BACKSUB                    } from '../modules/nf-core/backsub/main'
-include { STAINSEGMY                  } from '../modules/qbic/stainsegmy/main'
+include { STAINSEGMY                 } from '../modules/qbic/stainsegmy/main'
 include { paramsSummaryMap           } from 'plugin/nf-schema'
 include { TIF_REGISTRATION_STAINWARPY} from '../subworkflows/nf-core/tif_registration_stainwarpy'
 include { paramsSummaryMultiqc       } from '../subworkflows/nf-core/utils_nfcore_pipeline'
@@ -35,15 +35,74 @@ workflow SPATIALLATTICE {
     def ch_multiqc_files = channel.empty()
 
 
-    ch_samplesheet.view()
-    //ch_input.view()
-    // Split into macsima and hne channels here
-    ch_samplesheet
-        .multiMap { meta, raw_images, hne_file ->
-            macsima: [meta, raw_images]
-            hne: [meta, hne_file]
+    //ch_samplesheet.view()
+
+    if (params.project){
+        ch_samplesheet.view()
+        ch_input = ch_samplesheet
+        .flatMap { meta, project, hne ->
+            def roi_tuples = []
+            project.eachDir { exp_dir ->
+                log.info "experiment dir name: ${exp_dir.name}"
+                def experiment = exp_dir.name
+                def rawdata_dir = exp_dir
+                    .listFiles()
+                    .findAll { it -> it.isDirectory()}
+                    .collect { it ->it / 'RawData' }
+                    .find { it -> it.isDirectory() }
+
+                if (rawdata_dir == null) return
+                log.info "rawdata dir: ${rawdata_dir}"
+
+                log.info "Checking if rawdata dir is a directory: ${rawdata_dir.isDirectory()}"
+                if (!rawdata_dir.isDirectory()) return
+
+                rawdata_dir.eachDir { rack_dir ->
+                    def rack = rack_dir.name
+                    log.info "rack dir name: ${rack}"
+                    if (rack == 'R0') return
+
+                    rack_dir.eachDir { well_dir ->
+                        def well = well_dir.name
+                        log.info "well dir name: ${well}"
+
+                        well_dir.eachDir { roi_dir ->
+                            def roi = roi_dir.name
+                            log.info "roi dir name: ${roi}"
+                            if (roi == 'ROI0') return
+
+                            def unique_roi_id = "${rack}_${well}_${roi}"
+                            def new_meta = meta.clone()
+                            new_meta.experiment = experiment
+                            new_meta.rack = rack
+                            new_meta.well = well
+                            new_meta.roi = roi
+                            new_meta.id = unique_roi_id
+
+                            roi_tuples << [new_meta, roi_dir, hne]
+                        }
+                    }
+                }
+            }
+            return roi_tuples
+
         }
-        .set { ch_input }
+        .multiMap { meta, macsima, hne_ ->
+            macsima: [meta, macsima]
+            hne: [meta, hne_]
+        }
+    }
+    else {
+        // Split into macsima and hne channels
+        ch_samplesheet
+            .multiMap { meta, macsima, hne_ ->
+                macsima: [meta, macsima]
+                hne: [meta, hne_]
+            }
+            .set { ch_input }
+    }
+
+    ch_input.macsima.view()
 
 
 
@@ -59,7 +118,6 @@ workflow SPATIALLATTICE {
         .flatMap { meta, acq_group_dirs ->
             acq_group_dirs.collect { acq_path ->
                 def acq_name = acq_path.getFileName().toString()
-
                 // Parse: rack-01-well-C01-roi-001-exp-1
                 def parts = acq_name.split('-')
                 //def rack = parts[1] # delete potentially
@@ -78,7 +136,7 @@ workflow SPATIALLATTICE {
                 def marker_sheet = acq_path.resolve('markers.csv')
 
                 // Create unique ID for this acquisition group
-                def unique_id = "${meta.id}_${meta.rack}_${meta.well}_${meta.roi}_exp${exposure}"
+                def unique_id = "${meta.id}_exp${exposure}"
 
                 def enriched_meta = meta + [
                     id: unique_id,
