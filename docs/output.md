@@ -6,8 +6,6 @@ This document describes the output produced by the pipeline. Most of the plots a
 
 The directories listed below will be created in the results directory after the pipeline has finished. All paths are relative to the top-level results directory.
 
-<!-- TODO nf-core: Write this documentation describing your workflow's output -->
-
 ## Pipeline overview
 
 The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes data using the following steps:
@@ -15,6 +13,8 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 - [macsima2mc](#macsima2mc) - Stage raw MACSima tiles into the MCMICRO format
 - [ASHLAR](#ashlar) - Stitch and register the multiplexed images
 - [BackSub](#backsub) - Subtract background signal (optional)
+- [Cellpose](#cellpose) - Nuclei segmentation (optional)
+- [StainSegMy](#stainsegmy) - H&E tissue segmentation (optional)
 - [MultiQC](#multiqc) - Aggregate report describing results and QC from the whole pipeline
 - [Pipeline information](#pipeline-information) - Report metrics generated during the workflow execution
 
@@ -23,14 +23,16 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 <details markdown="1">
 <summary>Output files</summary>
 
-- `mcstaging/`
-  - `well-rack-roi-exp/`
-    - `markers.csv`: Marker table with channel names, exposure times and background information.
-    - `raw/`: Directory containing the staged raw `*.ome.tif` files.
+- `macsima2mc/`
+  - `<experiment>/`
+    - `<rack>_<well>_<roi>/`
+      - `<acquisition_group>/`
+        - `markers.csv`: Marker table with channel names, exposure times and background information.
+        - `raw/`: Directory containing the staged raw `*.ome.tiff` files.
 
 </details>
 
-[macsima2mc](https://github.com/SchapiroLabor/macsima2mc) is a staging module for MCMICRO that transforms MACSima data sets so they can be registered with ASHLAR. It converts the raw MACSima tiles into the MCMICRO directory structure, generating a `markers.csv` table and the raw `*.ome.tif` files used by the downstream steps.
+[macsima2mc](https://github.com/SchapiroLabor/macsima2mc) is a staging module for MCMICRO that transforms MACSima data sets so they can be registered with ASHLAR. It converts the raw MACSima tiles into the MCMICRO directory structure, generating a `markers.csv` table and the raw `*.ome.tiff` files used by the downstream steps. Each acquisition group is named after its position and exposure, for example `rack-01-well-C01-roi-001-exp-1`.
 
 ### ASHLAR
 
@@ -38,11 +40,12 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 <summary>Output files</summary>
 
 - `ashlar/`
-  - `*.ome.tif`: Stitched and registered pyramidal OME-TIFF image.
+  - `<experiment>/`
+    - `<rack>_<well>_<roi>_exp<exposure>.ome.tif`: Stitched and registered pyramidal OME-TIFF image.
 
 </details>
 
-[ASHLAR](https://github.com/labsyspharm/ashlar) stitches and registers the multiplexed images produced by the staging step. It aligns the individual tiles and cycles into a single, registered whole-slide image.
+[ASHLAR](https://github.com/labsyspharm/ashlar) stitches and registers the multiplexed images produced by the staging step. It aligns the individual tiles and cycles into a single, registered whole-slide image. One image is produced per acquisition group, named after the rack, well, ROI and exposure (for example `R1_A1_ROI1_exp1.ome.tif`).
 
 ### BackSub
 
@@ -50,12 +53,37 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 <summary>Output files</summary>
 
 - `backsub/`
-  - `*.ome.tif`: Background corrected pyramidal OME-TIFF image.
-  - `*.csv`: Marker table adjusted to match the background corrected image.
+  - `<experiment>/`
+    - `<rack>_<well>_<roi>_exp<exposure>_backsub.ome.tif`: Background corrected pyramidal OME-TIFF image.
+    - `<rack>_<well>_<roi>_exp<exposure>_backsub.csv`: Marker table adjusted to match the background corrected image.
 
 </details>
 
-[BackSub](https://github.com/SchapiroLabor/Background_subtraction) performs pixel-by-pixel channel subtraction to remove background signal from the stitched and registered images. This step is optional and only runs when `--background_subtraction` is set.
+[BackSub](https://github.com/SchapiroLabor/Background_subtraction) performs pixel-by-pixel channel subtraction to remove background signal from the stitched and registered images. This step is optional and only runs when `--background_subtraction` is set (enabled by default).
+
+### Cellpose
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `cellpose/`
+  - `*.ome.tif`: Nuclei segmentation masks overlaid on the input image.
+
+</details>
+
+[Cellpose](https://github.com/MouseLand/cellpose) performs nuclei segmentation on the MACSima images. This step is optional and only runs when `--cellpose` is set (disabled by default). The segmentation model can be selected with the `--cellpose_model` parameter (default `cyto3`).
+
+### StainSegMy
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `stainsegmy/`
+  - `*.ome.tif`: H&E tissue segmentation masks.
+
+</details>
+
+StainSegMy performs tissue segmentation on the H&E stained images. This step is optional and only runs when `--stainsegmy` is set (disabled by default).
 
 ### MultiQC
 
