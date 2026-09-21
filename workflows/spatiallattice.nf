@@ -9,8 +9,10 @@ include { ASHLAR                     } from '../modules/nf-core/ashlar/main'
 include { BACKSUB                    } from '../modules/nf-core/backsub/main'
 include { STAINSEGMY                 } from '../modules/qbic/stainsegmy/main'
 include { CELLPOSE                    } from '../modules/nf-core/cellpose/main'
+include { RAMI2D_REGISTER            } from '../modules/local/rami2d/register/main'
+include { RAMI2D_TRANSFORM           } from '../modules/local/rami2d/transform/main'
 include { paramsSummaryMap           } from 'plugin/nf-schema'
-include { TIF_REGISTRATION_STAINWARPY} from '../subworkflows/nf-core/tif_registration_stainwarpy'
+include { TIF_REGISTRATION_STAINWARPY} from '../subworkflows/local/tif_registration_stainwarpy'
 include { paramsSummaryMultiqc       } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { softwareVersionsToYAML     } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { methodsDescriptionText     } from '../subworkflows/local/utils_nfcore_spatiallattice_pipeline'
@@ -37,20 +39,20 @@ workflow SPATIALLATTICE {
 
 
    // if batch processing a project, collect metadata from the project directory structure
+   // HnE processing not functional yet for this option
     if (params.project){
-        ch_samplesheet.view()
         ch_input = ch_samplesheet
         .flatMap { meta, project, hne ->
             def roi_tuples = []
             project.eachDir { exp_dir ->
                 log.info "experiment dir name: ${exp_dir.name}"
                 def experiment = exp_dir.name
-                def rawdata_dir = exp_dir
+                def sample_dir = exp_dir
                     .listFiles()
                     .findAll { it -> it.isDirectory()}
-                    .collect { it ->it / 'RawData' }
-                    .find { it -> it.isDirectory() }
+                    .find { it -> (it/ 'RawData').isDirectory() }
 
+                def rawdata_dir = sample_dir / 'RawData'
                 if (rawdata_dir == null) return
                 log.info "rawdata dir: ${rawdata_dir}"
 
@@ -74,6 +76,7 @@ workflow SPATIALLATTICE {
                             def unique_roi_id = "${rack}_${well}_${roi}"
                             def new_meta = meta.clone()
                             new_meta.experiment = experiment
+                            new_meta.sample = sample_dir.name
                             new_meta.rack = rack
                             new_meta.well = well
                             new_meta.roi = roi
@@ -102,24 +105,27 @@ workflow SPATIALLATTICE {
             .set { ch_input }
     }
 
-    ch_input.macsima.view()
+
 
 
 
 
     // macsima2mc staging
     MCSTAGING_MACSIMA2MC(
-        ch_input.macsima.map { meta, raw_images -> [ meta, raw_images, "${meta.id}" ] }
+        ch_input.macsima.map { meta, raw_images -> [ meta, raw_images, "${meta.sample}" ] }
     )
 
-    MCSTAGING_MACSIMA2MC.out.out_dir.view()
-
+    // add metadata to the macsima2mc output for downstream processing
+    // get markersheet and images from the macsima2mc output
     def ch_macsima2mc_out = MCSTAGING_MACSIMA2MC.out.out_dir
         .flatMap { meta, acq_group_dirs ->
-            acq_group_dirs.collect { acq_path ->
+            def acq_paths = acq_group_dirs instanceof List ? acq_group_dirs : [acq_group_dirs]
+            acq_paths.collect { acq_path ->
                 def acq_name = acq_path.getFileName().toString()
+                log.info "acq_path: ${acq_path}, acq_name: ${acq_name}"
                 // Parse: rack-01-well-C01-roi-001-exp-1
                 def parts = acq_name.split('-')
+                log.info "acq_name parts: ${parts}"
                 def exposure = parts[7]
 
                 // Get all ome.tif files from the raw subdirectory
@@ -152,7 +158,6 @@ workflow SPATIALLATTICE {
     def ch_ashlar_in = ch_macsima2mc_out.images
     def ch_markersheet = ch_macsima2mc_out.markers
 
-    ch_ashlar_in.view()
     // ashlar stitching and registration
     ASHLAR(ch_ashlar_in, [], [])
 
@@ -171,6 +176,8 @@ workflow SPATIALLATTICE {
     }
 
     //nuclei segmentation with cellpose
+    //TODO: test this cellpsoe 4
+    // TODO potentailly add cellpose3
     if (params.cellpose) {
         CELLPOSE(ch_input.macsima.map { meta, raw_images -> [meta, raw_images] }, params.cellpose_model)
     }
@@ -180,16 +187,54 @@ workflow SPATIALLATTICE {
         STAINSEGMY(ch_input.hne)
     }
 
-    // segmentation Macsima
-    //TODO: adding cellpose module here for segmentation of Macsima images
-    // nulcear segmentation only not cell segmentation
 
+    // registertaion maxsima with h&e using rami2d and transfrom seg masks
+    if (params.stainwarpy) {
+        ch_input.hne.view()
 
-    // H&E registration (optional, off by default)TODO later
-    // TODO try with the tool from victor
-   // if (params.he_registration) {
-   //     TIF_REGISTRATION_STAINWARPY(ch_hne, ASHLAR.out.tif,[],[],[])
-   // }
+        def ch_macsima_img = ASHLAR.out.tif.map { meta, tif -> [meta.project, meta, tif]}
+        def ch_hne_img = ch_input.hne.map { meta, hne_image ->
+            [meta.project, meta, hne_image]
+        }
+
+        if (params.stainsegmy) {
+            ch_segmask = STAINSEGMY.out.hne_seg_mask
+                        .map { meta, seg_mask ->
+                            [meta.project, meta, seg_mask]
+                        }
+        }
+        else {
+            ch_segmask = ch_hne_img
+                        .map { project, meta, hne_file ->
+                            [meta.project, meta, []]
+                        }
+        }
+        //build registartion input channel for stainwarpy
+        ch_stainwarpy_input = ch_macsima_img
+            .join(ch_hne_img)
+            .join(ch_segmask)
+            .map { key, macsima_meta, macsima_tif,hne_meta, hne_tif, meta_segmask, seg_mask -> [macsima_meta, macsima_tif, hne_tif, seg_mask] }
+
+        TIF_REGISTRATION_STAINWARPY(ch_stainwarpy_input)
+    }
+
+    if (params.rami2d) {
+        // Join the ASHLAR-registered MACSima image (fixed) with the H&E image (moving)
+        // for now default
+        // get common shared key for joining the channels
+        def ch_macsima_img = ASHLAR.out.tif.map { meta, tif -> [meta.project, meta, tif]}
+        def ch_hne_img = ch_input.hne.map { meta, hne_dir ->
+            def hne_file = hne_dir.listFiles().find { it.isFile() }
+            [meta.project, meta, hne_file]
+        }
+        // join channels by shared key, and drop it
+        ch_rami2d_register = ch_macsima_img
+            .join(ch_hne_img)
+            .map { key, macsima_meta, macsima_tif,hne_meta, hne_tif -> [macsima_meta, macsima_tif, hne_tif] }
+        ch_rami2d_register.view()
+
+        RAMI2D_REGISTER(ch_rami2d_register)
+    }
 
     //
     // Collate and save software versions

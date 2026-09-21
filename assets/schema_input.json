@@ -13,6 +13,12 @@
                 "errorMessage": "experiment name must be provided and cannot contain spaces",
                 "meta": ["experiment"]
             },
+            "sample": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "sample name must be provided and cannot contain spaces",
+                "meta": ["sample"]
+            },
             "rack": {
                 "type": "string",
                 "pattern": "^\\S+$",
@@ -46,6 +52,6 @@
                 "errorMessage": "Path to the H&E ROI file must be provided and cannot contain spaces"
             }
         },
-        "required": ["experiment", "rack", "well", "roi", "raw_images_ROI"]
+        "required": ["experiment", "sample", "rack", "well", "roi", "raw_images_ROI"]
     }
 }

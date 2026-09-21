@@ -1,8 +1,4 @@
-# nf-core/spatiallattice: Citations
-
-## [nf-core](https://pubmed.ncbi.nlm.nih.gov/32055031/)
-
-> Ewels PA, Peltzer A, Fillinger S, Patel H, Alneberg J, Wilm A, Garcia MU, Di Tommaso P, Nahnsen S. The nf-core framework for community-curated bioinformatics pipelines. Nat Biotechnol. 2020 Mar;38(3):276-278. doi: 10.1038/s41587-020-0439-x. PubMed PMID: 32055031.
+# qbic-pipelines/spatiallattice: Citations
 
 ## [Nextflow](https://pubmed.ncbi.nlm.nih.gov/28398311/)
 
@@ -10,9 +6,27 @@
 
 ## Pipeline tools
 
-- [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/)
+- [macsima2mc](https://github.com/SchapiroLabor/macsima2mc)
 
-> Andrews, S. (2010). FastQC: A Quality Control Tool for High Throughput Sequence Data [Online].
+- [ASHLAR](https://labsyspharm.github.io/ashlar/)
+
+  > Muhlich, J. L., Chen, Y., Yapp, C., Russell, D., Santagata, S., Sorger, P. K. Stitching and registering highly multiplexed whole-slide images of tissues and tumors using ASHLAR. Bioinformatics 2022 October; 38(19):4613–4621. doi: [10.1093/bioinformatics/btac544](https://doi.org/10.1093/bioinformatics/btac544).
+
+- [backsub](https://github.com/SchapiroLabor/Background_subtraction)
+
+  > Bestak, K., Perez, V., & Wuennemann, F. (2025). Backsub: a pixel-by-pixel channel subtraction tool for multiplexed immunofluorescence data. Available at: https://github.com/SchapiroLabor/Background_subtraction
+
+- [cellpose](https://cellpose.readthedocs.io/en/latest/index.html)
+
+  > Pachitariu, M., Rariden, M., & Stringer, C. (2025). Cellpose-SAM: superhuman generalization for cellular segmentation. [bioRxiv](https://www.biorxiv.org/content/10.1101/2025.04.28.651001v1).
+
+- [stainsegmy](https://github.com/qbic-pipelines/stainsegmy)
+
+  > Kumarasekara, T. (2026). Semantic segmentation of H&E-stained tissue images.
+
+- [stainwarpy]("https://github.com/qbic-pipelines/stainwarpy")
+
+  > Kumarasekara, T. (2026). Stainwarpy, spatial registration for H&E and multiplex-stained tissue images.
 
 - [MultiQC](https://pubmed.ncbi.nlm.nih.gov/27312411/)
 

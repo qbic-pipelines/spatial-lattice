@@ -1,0 +1,84 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+# # TODO nf-core: Add a description of the module and list keywords
+name: "rami2d_register"
+description: write your description here
+keywords:
+  - registration
+  - multimodal
+  - 2D
+  - imaging
+tools:
+  - "rami2d":
+      description: "(RAMI2D) Robust Alignment of Multichannel Images in 2D"
+      homepage: "https://github.com/VictorDidier/RAMI2D/tree/main"
+      documentation: "https://github.com/VictorDidier/RAMI2D/blob/main/README.md"
+      tool_dev_url: "https://github.com/VictorDidier/RAMI2D/tree/main"
+      doi: no DOI available
+      licence: [BSD 3-Clause]
+
+input:
+  ### TODO nf-core: Add a description of all of the variables used as input
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'sample1' ]`
+    - img1:
+        type: file
+        description: First image to be registered
+        pattern: "*.{tif,tiff}"
+        ontologies:
+          - edam: "http://edamontology.org/format_2572" # BAM
+          - edam: "http://edamontology.org/format_2573" # CRAM
+          - edam: "http://edamontology.org/format_3462" # SAM
+    - img2:
+        type: file
+        description: Second image to be registered
+        pattern: "*.{tif,tiff}"
+        ontologies:
+          - edam: "http://edamontology.org/format_2572" # BAM
+          - edam: "http://edamontology.org/format_2573" # CRAM
+          - edam: "http://edamontology.org/format_3462" # SAM
+
+output:
+  ### TODO nf-core: Add a description of all of the variables used as output
+  bam:
+    - - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'sample1' ]`
+      - "*.bam":
+          type: file
+          description: Sorted BAM/CRAM/SAM file
+          pattern: "*.{bam,cram,sam}"
+          ontologies:
+            - edam: "http://edamontology.org/format_2572" # BAM
+            - edam: "http://edamontology.org/format_2573" # CRAM
+            - edam: "http://edamontology.org/format_3462" # SAM
+  versions_rami2d:
+    - - "${task.process}":
+          type: string
+          description: The name of the process
+      - "rami2d":
+          type: string
+          description: The name of the tool
+      - "rami2d --version":
+          type: eval
+          description: The expression to obtain the version of the tool
+
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - rami2d:
+          type: string
+          description: The name of the tool
+      - rami2d-register --version:
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - "@CaroAMN"
+maintainers:
+  - "@CaroAMN"

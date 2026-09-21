@@ -1,4 +1,4 @@
-process STAINWARPY_REGISTER {
+process STAINWARPY_TRANSFORMSEGMASK {
     tag "$meta.id"
     label 'process_single'
 
@@ -8,15 +8,15 @@ process STAINWARPY_REGISTER {
         'community.wave.seqera.io/library/stainwarpy:0.2.4--c8bf19657f01e47a'}"
 
     input:
-    tuple val(meta), path(hne_img)
-    tuple val(meta2), path(multiplx_img)
-    val fixed_img
-    val final_sz
+    tuple val(meta), path(multiplx_img) ,path(hne_img), path(seg_mask), path(tform_map)
+    //tuple val(meta2), path(multiplx_img)
+    //tuple val(meta3), path(seg_mask)
+    //tuple val(meta4), path(tform_map)
+    //val fixed_img
+   // val final_sz
 
     output:
-    tuple val(meta), path("*_transformed_image.ome.tif")                                         , emit: reg_image
-    tuple val(meta), path("*_registration_metrics_tform_map.json")                               , emit: reg_metrics_tform
-    tuple val(meta), path("*_feature_based_transformation_map.npy")                              , emit: tform_map
+    tuple val(meta), path("*_transformed_segmentation_mask.ome.tif")                             , emit: transformed_seg_mask
     tuple val("${task.process}"), val('stainwarpy'), eval("stainwarpy --version | sed 's/.* //'"), emit: versions_stainwarpy, topic: versions
 
     when:
@@ -25,27 +25,26 @@ process STAINWARPY_REGISTER {
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
-
+    def fixed_img = params.fixed_img ?: 'multiplexed'
+    def final_sz = params.final_sz ?: 'multiplexed'
     """
     stainwarpy \\
-        register \\
+        transform-seg-mask \\
+        ${seg_mask} \\
         ${multiplx_img} \\
         ${hne_img} \\
         . \\
+        ${tform_map} \\
         ${fixed_img} \\
         ${final_sz} \\
         ${args}
 
-    mv 0_final_channel_image.ome.tif ${prefix}_transformed_image.ome.tif
-    mv registration_metrics_tform_map.json ${prefix}_registration_metrics_tform_map.json
-    mv feature_based_transformation_map.npy ${prefix}_feature_based_transformation_map.npy
+    mv transformed_segmentation_mask.ome.tif ${prefix}_transformed_segmentation_mask.ome.tif
     """
 
     stub:
     def prefix = task.ext.prefix ?: "${meta.id}"
     """
-    touch ${prefix}_transformed_image.ome.tif
-    touch ${prefix}_registration_metrics_tform_map.json
-    touch ${prefix}_feature_based_transformation_map.npy
+    touch ${prefix}_transformed_segmentation_mask.ome.tif
     """
 }
