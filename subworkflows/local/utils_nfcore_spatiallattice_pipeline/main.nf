@@ -120,7 +120,8 @@ workflow PIPELINE_INITIALISATION {
             .map { meta, raw_images, hne ->
                 // meta already holds experiment, rack, well, roi from the schema.
                 // Add an id (samplesheetToList does not create one for you).
-                def new_meta = meta + [ id: meta.experiment ]
+                def identity = [meta.experiment, meta.sample, meta.rack, meta.well, meta.roi]
+                def new_meta = meta + [ id: identity.collect { "${it.size()}-${it}" }.join('_') ]
                 [ new_meta, file(raw_images, checkIfExists: true), hne]
             }
             .set { ch_samplesheet }

@@ -6,6 +6,12 @@
 
 ## Pipeline tools
 
+- [MCMICRO](https://mcmicro.org/) — modular microscopy processing ecosystem.
+
+  > Schapiro et al. MCMICRO: a scalable, modular image-processing pipeline for multiplexed tissue imaging. Nature Methods 19, 311–315 (2022). [doi:10.1038/s41592-021-01308-y](https://doi.org/10.1038/s41592-021-01308-y).
+
+- [RAMI2D](https://github.com/VictorDidier/RAMI2D) — alternative spatial-registration backend. This implementation pins version 1.0.2 at [commit f6c4cc0](https://github.com/VictorDidier/RAMI2D/tree/f6c4cc0f48dbd86b866ade8d3bf67177dd45712f); record the actual software revision and container used.
+
 - [macsima2mc](https://github.com/SchapiroLabor/macsima2mc)
 
 - [ASHLAR](https://labsyspharm.github.io/ashlar/)
@@ -18,13 +24,15 @@
 
 - [cellpose](https://cellpose.readthedocs.io/en/latest/index.html)
 
-  > Pachitariu, M., Rariden, M., & Stringer, C. (2025). Cellpose-SAM: superhuman generalization for cellular segmentation. [bioRxiv](https://www.biorxiv.org/content/10.1101/2025.04.28.651001v1).
+  > Stringer et al. Cellpose: a generalist algorithm for cellular segmentation. Nature Methods 18, 100–106 (2021). [doi:10.1038/s41592-020-01018-x](https://doi.org/10.1038/s41592-020-01018-x).
+
+  The integrated prototype uses Cellpose 3.0.1 with the original nuclei model. For workflows using the newer restoration models or `cyto3`, also cite [Cellpose3: one-click image restoration for improved cellular segmentation](https://doi.org/10.1038/s41592-025-02595-5), Nature Methods 22, 592–599 (2025). Cellpose-SAM is not used in this prototype.
 
 - [stainsegmy](https://github.com/qbic-pipelines/stainsegmy)
 
   > Kumarasekara, T. (2026). Semantic segmentation of H&E-stained tissue images.
 
-- [stainwarpy]("https://github.com/qbic-pipelines/stainwarpy")
+- [stainwarpy](https://github.com/qbic-pipelines/stainwarpy)
 
   > Kumarasekara, T. (2026). Stainwarpy, spatial registration for H&E and multiplex-stained tissue images.
 
@@ -53,3 +61,13 @@
 - [Singularity](https://pubmed.ncbi.nlm.nih.gov/28494014/)
 
   > Kurtzer GM, Sochat V, Bauer MW. Singularity: Scientific containers for mobility of compute. PLoS One. 2017 May 11;12(5):e0177459. doi: 10.1371/journal.pone.0177459. eCollection 2017. PubMed PMID: 28494014; PubMed Central PMCID: PMC5426675.
+
+## Integrated OME-Zarr
+
+- [OME-NGFF RFC-5: Coordinate Systems and Transformations](https://ngff.openmicroscopy.org/rfc/5/).
+- [ngff-zarr](https://ngff-zarr.readthedocs.io/) — exporter library; this prototype pins version 0.52.0.
+- [The FAIR Guiding Principles for scientific data management and stewardship](https://doi.org/10.1038/sdata.2016.18). Scientific Data 3, 160018 (2016).
+
+## Planned SpatialData integration
+
+- [SpatialData: an open and universal data framework for spatial omics](https://doi.org/10.1038/s41592-024-02212-x) (2024); [documentation](https://spatialdata.scverse.org/en/stable/). This is a future integration reference, not a claim that the current pipeline exports SpatialData artifacts.

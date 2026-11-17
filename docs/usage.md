@@ -1,3 +1,5 @@
+> Development branch: for the integrated prototype, use the [current README](../README.md), [implementation notes](prototype_subworkflows.md) and [OME-Zarr output guide](integrated_omezarr.md). Legacy options described below may not apply to this entry point.
+
 # nf-core/spatiallattice: Usage
 
 ## :warning: Please read this documentation on the nf-core website: [https://nf-co.re/spatiallattice/usage](https://nf-co.re/spatiallattice/usage)
@@ -255,3 +257,7 @@ We recommend adding the following line to your environment to limit this (typica
 ```bash
 NXF_OPTS='-Xms1g -Xmx4g'
 ```
+
+## Integrated OME-Zarr
+
+See the [integration guide](integrated_omezarr.md) for setup, output layout, coordinate conventions, validation and limitations. Artifacts are published under `integrated/<acquisition_id>.ome.zarr`.

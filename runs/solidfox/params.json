@@ -1,0 +1,23 @@
+{
+  "input": "/home/ubuntu/projects/spatial_lattice/runs/solidfox/samplesheet.csv",
+  "outdir": "/home/ubuntu/projects/spatial_lattice/results/solidfox",
+  "project": false,
+  "illumination_correction": false,
+  "hi_exposure_only": true,
+  "remove_reference_marker": false,
+  "qc_metrics": false,
+  "write_table": false,
+  "background_subtraction": false,
+  "stainsegmy": false,
+  "segmentation": "cellpose3",
+  "fixed_img": "multiplexed",
+  "final_sz": "multiplexed",
+  "publish_dir_mode": "copy",
+  "validate_params": true,
+  "integrated_omezarr": true,
+  "cellpose3_pretrained_model": "nuclei",
+  "cellpose3_diameter": 17,
+  "cellpose3_flow_threshold": 0.4,
+  "cellpose3_save_flows": false,
+  "registration_backend": "stainwarpy"
+}

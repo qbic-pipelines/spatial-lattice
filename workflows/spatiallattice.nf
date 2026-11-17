@@ -1,18 +1,15 @@
+include { MACSIMA_MCMICRO } from '../subworkflows/local/macsima_mcmicro/main'
+include { SPATIAL_REGISTRATION_STAINWARPY } from '../subworkflows/local/spatial_registration_stainwarpy/main'
+include { SPATIAL_REGISTRATION_RAMI2D } from '../subworkflows/local/spatial_registration_rami2d/main'
+include { BUILD_INTEGRATED_OMEZARR } from '../subworkflows/local/build_integrated_omezarr/main'
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     IMPORT MODULES / SUBWORKFLOWS / FUNCTIONS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 include { MULTIQC                    } from '../modules/nf-core/multiqc/main'
-include { MCSTAGING_MACSIMA2MC       } from '../modules/nf-core/mcstaging/macsima2mc/main'
-include { ASHLAR                     } from '../modules/nf-core/ashlar/main'
-include { BACKSUB                    } from '../modules/nf-core/backsub/main'
 include { STAINSEGMY                 } from '../modules/qbic/stainsegmy/main'
-include { RAMI2D_REGISTER            } from '../modules/local/rami2d/register/main'
-include { RAMI2D_TRANSFORM           } from '../modules/local/rami2d/transform/main'
 include { paramsSummaryMap           } from 'plugin/nf-schema'
-include { TIF_REGISTRATION_STAINWARPY} from '../subworkflows/local/tif_registration_stainwarpy'
-include { MACSIMA_SEGMENTATION       } from '../subworkflows/local/macsima_segmentation'
 include { paramsSummaryMultiqc       } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { softwareVersionsToYAML     } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { methodsDescriptionText     } from '../subworkflows/local/utils_nfcore_spatiallattice_pipeline'
@@ -38,215 +35,72 @@ workflow SPATIALLATTICE {
     def ch_multiqc_files = channel.empty()
 
 
-   // if batch processing a project, collect metadata from the project directory structure
-   // HnE processing not functional yet for this option
-    if (params.project){
-        ch_input = ch_samplesheet
-        .flatMap { meta, project, hne ->
-            def roi_tuples = []
-            project.eachDir { exp_dir ->
-                log.info "experiment dir name: ${exp_dir.name}"
-                def experiment = exp_dir.name
-                def sample_dir = exp_dir
-                    .listFiles()
-                    .findAll { it -> it.isDirectory()}
-                    .find { it -> (it/ 'RawData').isDirectory() }
+    // Prototype integration has one backend and a complete reference/moving pair.
+    if (params.project)
+        error 'The integrated prototype currently requires a per-ROI samplesheet (project mode has no H&E pairing)'
+    if (!params.integrated_omezarr)
+        error 'BUILD_INTEGRATED_OMEZARR is required in the integrated prototype'
+    if (!(params.registration_backend in ['stainwarpy', 'rami2d']))
+        error 'registration_backend must be stainwarpy or rami2d'
+    if (params.stainwarpy || params.rami2d)
+        error 'Replace legacy --stainwarpy/--rami2d flags with --registration_backend stainwarpy|rami2d'
+    if (params.fixed_img != 'multiplexed' || params.final_sz != 'multiplexed')
+        error 'The prototype uses the MACSima image as the fixed and final reference grid'
+    if (params.segmentation != 'cellpose3')
+        error 'The integrated prototype currently requires --segmentation cellpose3'
 
-                def rawdata_dir = sample_dir / 'RawData'
-                if (rawdata_dir == null) return
-                log.info "rawdata dir: ${rawdata_dir}"
-
-                log.info "Checking if rawdata dir is a directory: ${rawdata_dir.isDirectory()}"
-                if (!rawdata_dir.isDirectory()) return
-
-                rawdata_dir.eachDir { rack_dir ->
-                    def rack = rack_dir.name
-                    log.info "rack dir name: ${rack}"
-                    if (rack == 'R0') return
-
-                    rack_dir.eachDir { well_dir ->
-                        def well = well_dir.name
-                        log.info "well dir name: ${well}"
-
-                        well_dir.eachDir { roi_dir ->
-                            def roi = roi_dir.name
-                            log.info "roi dir name: ${roi}"
-                            if (roi == 'ROI0') return
-
-                            def unique_roi_id = "${rack}_${well}_${roi}"
-                            def new_meta = meta.clone()
-                            new_meta.experiment = experiment
-                            new_meta.sample = sample_dir.name
-                            new_meta.rack = rack
-                            new_meta.well = well
-                            new_meta.roi = roi
-                            new_meta.id = unique_roi_id
-
-                            roi_tuples << [new_meta, roi_dir, hne]
-                        }
-                    }
-                }
-            }
-            return roi_tuples
-
-        }
-        .multiMap { meta, macsima, hne_ ->
-            macsima: [meta, macsima]
-            hne: [meta, hne_]
-        }
-    }
-    else {
-        // Split into macsima and hne channels
-        ch_samplesheet
-            .multiMap { meta, macsima, hne_ ->
-                macsima: [meta, macsima]
-                hne: [meta, hne_]
-            }
-            .set { ch_input }
+    ch_input = ch_samplesheet.multiMap { meta, macsima, hne ->
+        macsima: [meta, macsima]
+        hne: [meta, hne]
     }
 
-
-
-
-
-
-    // macsima2mc staging
-    MCSTAGING_MACSIMA2MC(
-        ch_input.macsima.map { meta, raw_images -> [ meta, raw_images, "${meta.sample}" ] }
-    )
-
-    // add metadata to the macsima2mc output for downstream processing
-    // get markersheet and images from the macsima2mc output
-    def ch_macsima2mc_out = MCSTAGING_MACSIMA2MC.out.out_dir
-        .flatMap { meta, acq_group_dirs ->
-            def acq_paths = acq_group_dirs instanceof List ? acq_group_dirs : [acq_group_dirs]
-            acq_paths.collect { acq_path ->
-                def acq_name = acq_path.getFileName().toString()
-                log.info "acq_path: ${acq_path}, acq_name: ${acq_name}"
-                // Parse: rack-01-well-C01-roi-001-exp-1
-                def parts = acq_name.split('-')
-                log.info "acq_name parts: ${parts}"
-                // Derive the exposure from the 'exp-<value>' token instead of a
-                // hard-coded index, so varying acquisition-group name formats
-                // (e.g. the stub's 'well-rack-roi-exp') do not break parsing.
-                def exp_idx = parts.findIndexOf { it == 'exp' }
-                def exposure = (exp_idx >= 0 && exp_idx + 1 < parts.size()) ? parts[exp_idx + 1] : parts[-1]
-
-                // Get all ome.tif files from the raw subdirectory
-                def raw_dir = acq_path.resolve('raw')
-                def images = raw_dir.toFile().listFiles()
-                    ?.findAll { it -> it.name.endsWith('.ome.tif') || it.name.endsWith('.ome.tiff') }
-                    ?.collect { it -> it.toPath() }
-                    ?: []
-
-                // Get marker sheet (adjust filename if needed)
-                def marker_sheet = acq_path.resolve('markers.csv')
-                // Create unique ID for this acquisition group
-                def unique_id = "${meta.id}_exp${exposure}"
-
-                def enriched_meta = meta + [
-                    id: unique_id,
-                    exposure: exposure,
-                    acquisition_group: acq_name
-                ]
-
-                [enriched_meta, images, marker_sheet]
-            }
-        }
-        .multiMap { meta, images, marker_sheet ->
-            images: [meta, images]
-            markers: [meta, marker_sheet]
-    }
-
-    // seperate them for ashlar input
-    def ch_ashlar_in = ch_macsima2mc_out.images
-    def ch_markersheet = ch_macsima2mc_out.markers
-
-    // ashlar stitching and registration
-    ASHLAR(ch_ashlar_in, [], [])
-
-    // background subtraction (optional, off by default)
-    if (params.background_subtraction) {
-
-        // merge ashlar output with the corresponding marker sheet by the metamap
-        ch_backsub_in = ASHLAR.out.tif
-            .join(ch_markersheet)
-            .multiMap { meta, ashlar_tif, marker_sheet ->
-                images: [meta, ashlar_tif]
-                markers: [meta, marker_sheet]
-            }
-
-        BACKSUB(ch_backsub_in.images, ch_backsub_in.markers)
-
-        // segment the background subtracted image
-        ch_segmentation_in = BACKSUB.out.backsub_tif
-    }
-    else {
-        ch_segmentation_in = ASHLAR.out.tif
-    }
-
-    // segmentation of the multiplexed image with the tool(s) selected via --segmentation
-    segmentation_methods = params.segmentation
-        ? params.segmentation.tokenize(',').collect { method -> method.trim() }.unique()
-        : []
-
-    if (segmentation_methods) {
-        MACSIMA_SEGMENTATION(ch_segmentation_in, segmentation_methods)
-    }
-
-    // segmentation h&E
+    MACSIMA_MCMICRO(ch_input.macsima)
     if (params.stainsegmy) {
         STAINSEGMY(ch_input.hne)
     }
 
-
-    // registertaion maxsima with h&e using rami2d and transfrom seg masks
-    if (params.stainwarpy) {
-        ch_input.hne.view()
-
-        def ch_macsima_img = ASHLAR.out.tif.map { meta, tif -> [meta.project, meta, tif]}
-        def ch_hne_img = ch_input.hne.map { meta, hne_image ->
-            [meta.project, meta, hne_image]
+    // Key by the full sample/ROI identity. combine allows multiple acquisition
+    // exposures to reuse the same moving image; groupTuple rejects ambiguous H&E.
+    ch_hne = ch_input.hne.map { meta, image ->
+        if (!image) error "Missing H&E image for ${meta.id}"
+        [[meta.experiment, meta.sample, meta.rack, meta.well, meta.roi], meta, image]
+    }.groupTuple().map { key, metas, images ->
+        if (images.size() != 1) error "Duplicate H&E pairing key: ${key}"
+        [key, metas[0], images[0]]
+    }
+    ch_moving_masks = params.stainsegmy
+        ? STAINSEGMY.out.hne_seg_mask.map { meta, mask ->
+            [[meta.experiment, meta.sample, meta.rack, meta.well, meta.roi], mask]
         }
+        : ch_hne.map { key, meta, image -> [key, []] }
+    ch_moving = ch_hne.join(ch_moving_masks, failOnDuplicate: true, failOnMismatch: true)
+    ch_fixed = MACSIMA_MCMICRO.out.reference.map { meta, image ->
+        [[meta.experiment, meta.sample, meta.rack, meta.well, meta.roi], meta, image]
+    }
+    // Validate both key sets before a keyed one-to-many combination.
+    ch_checked_moving = ch_fixed.map { key, meta, image -> [key] }.unique()
+        .join(ch_moving, failOnDuplicate: true, failOnMismatch: true)
+    ch_registration = ch_fixed.combine(ch_checked_moving, by: 0)
+        .map { key, meta, fixed, moving_meta, moving, mask -> [meta, fixed, moving, mask] }
 
-        if (params.stainsegmy) {
-            ch_segmask = STAINSEGMY.out.hne_seg_mask
-                        .map { meta, seg_mask ->
-                            [meta.project, meta, seg_mask]
-                        }
-        }
-        else {
-            ch_segmask = ch_hne_img
-                        .map { project, meta, hne_file ->
-                            [meta.project, meta, []]
-                        }
-        }
-        //build registartion input channel for stainwarpy
-        ch_stainwarpy_input = ch_macsima_img
-            .join(ch_hne_img)
-            .join(ch_segmask)
-            .map { key, macsima_meta, macsima_tif,hne_meta, hne_tif, meta_segmask, seg_mask -> [macsima_meta, macsima_tif, hne_tif, seg_mask] }
-
-        TIF_REGISTRATION_STAINWARPY(ch_stainwarpy_input)
+    if (params.registration_backend == 'stainwarpy') {
+        SPATIAL_REGISTRATION_STAINWARPY(ch_registration)
+        ch_result = SPATIAL_REGISTRATION_STAINWARPY.out.result
+    } else {
+        SPATIAL_REGISTRATION_RAMI2D(ch_registration)
+        ch_result = SPATIAL_REGISTRATION_RAMI2D.out.result
     }
 
-    if (params.rami2d) {
-        // Join the ASHLAR-registered MACSima image (fixed) with the H&E image (moving)
-        // for now default
-        // get common shared key for joining the channels
-        def ch_macsima_img = ASHLAR.out.tif.map { meta, tif -> [meta.project, meta, tif]}
-        def ch_hne_img = ch_input.hne.map { meta, hne_dir ->
-            def hne_file = hne_dir.listFiles().find { it.isFile() }
-            [meta.project, meta, hne_file]
+    ch_export = ch_result.map { meta, fixed, native_image, registered, moving_mask, transform, metrics ->
+            [meta.id, meta, fixed, registered, native_image, transform, metrics, moving_mask]
         }
-        // join channels by shared key, and drop it
-        ch_rami2d_register = ch_macsima_img
-            .join(ch_hne_img)
-            .map { key, macsima_meta, macsima_tif,hne_meta, hne_tif -> [macsima_meta, macsima_tif, hne_tif] }
-        ch_rami2d_register.view()
-
-        RAMI2D_REGISTER(ch_rami2d_register)
-    }
+        .join(MACSIMA_MCMICRO.out.masks.map { meta, mask -> [meta.id, mask] }, failOnDuplicate: true, failOnMismatch: true)
+        .join(MACSIMA_MCMICRO.out.markers.map { meta, markers -> [meta.id, markers] }, failOnDuplicate: true, failOnMismatch: true)
+        .map { id, meta, fixed, registered, native_image, transform, metrics, moving_mask, mask, markers ->
+            [meta, fixed, mask, registered, native_image, transform, metrics, markers, moving_mask]
+        }
+    BUILD_INTEGRATED_OMEZARR(ch_export)
+    ch_multiqc_files = ch_multiqc_files.mix(BUILD_INTEGRATED_OMEZARR.out.qc)
 
     //
     // Collate and save software versions

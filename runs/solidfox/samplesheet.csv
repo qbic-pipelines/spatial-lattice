@@ -1,0 +1,2 @@
+experiment,sample,rack,well,roi,raw_images_ROI,HnE_ROI
+SAMPLE_1,test,01,C01,001,/home/ubuntu/Caro/CRC_study/EXP_20241031_CRC2024_CRC027_CRC037/20241031_PatientsCRC027CRC037_2024-10-31_12-41-03/RawData/R1/A1/ROI1,/home/ubuntu/Caro/hne_crop/20241031_CRC027_crop.ome.tif

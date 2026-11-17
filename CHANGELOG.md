@@ -14,3 +14,9 @@ Initial release of nf-core/spatiallattice, created with the [nf-core](https://nf
 ### `Dependencies`
 
 ### `Deprecated`
+
+## Integrated OME-Zarr development
+
+- Add optional calibrated MACSima, Cellpose and registered H&E export with validation and provenance.
+- Add example-run checks, configuration, documentation and an updated diagram.
+- Match registration inputs by ROI metadata.
